@@ -1,0 +1,36 @@
+CVS_URI=":pserver:anoncvs@sourceware.org:/cvs/src"
+inherit cvs
+
+DESCRIPTION="GNU Debugger (Tk GUI)"
+HOMEPAGE="http://www.gnu.org/software/gdb/"
+
+PATCH_URI="config-rpath.patch"
+
+DIFF_EXCLUDES="configure"
+
+src_compile() {
+	for d in . gdb gdb/gdbtk/plugins libgui
+	do
+		pushd ${S}/${d}
+		autoconf || error "autoconf $d failed"
+		popd
+	done
+
+	cd ${B}
+	cygconf --disable-werror \
+		--disable-tui \
+		--with-tcl=/usr/lib \
+		--with-tk=/usr/lib
+
+	cygmake
+}
+
+src_install() {
+	cd ${B}
+	cyginstall
+
+	# conflicts with gdb
+	rm -f ${D}/usr/bin/gdb*
+	rm -fr ${D}/usr/{include,lib}
+	rm -fr ${D}/usr/share/{gdb,info,locale,man}
+}

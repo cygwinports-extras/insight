@@ -1,0 +1,362 @@
+--- origsrc/insight/config/override.m4	2010-06-10 11:09:45.000000000 -0500
++++ src/insight/config/override.m4	2010-08-24 14:42:38.854054200 -0500
+@@ -29,7 +29,7 @@ m4_copy_force([_AC_PREREQ], [AC_PREREQ])
+ 
+ dnl Ensure exactly this Autoconf version is used
+ m4_ifndef([_GCC_AUTOCONF_VERSION],
+-  [m4_define([_GCC_AUTOCONF_VERSION], [2.64])])
++  [m4_define([_GCC_AUTOCONF_VERSION], [2.65])])
+ 
+ dnl Test for the exact version when AC_INIT is expanded.
+ dnl This allows to update the tree in steps (for testing)
+--- origsrc/insight/config/tcl.m4	2009-02-02 17:18:05.000000000 -0600
++++ src/insight/config/tcl.m4	2010-08-24 16:54:15.509913100 -0500
+@@ -33,7 +33,6 @@ AC_DEFUN([SC_PATH_TCLCONFIG], [
+ 
+ 	    # First check to see if --with-tcl was specified.
+ 	    case "${host}" in
+-		*-*-cygwin*) platDir="win" ;;
+ 		*) platDir="unix" ;;
+ 	    esac
+ 	    if test x"${with_tclconfig}" != x ; then
+@@ -165,7 +164,6 @@ AC_DEFUN([SC_PATH_TKCONFIG], [
+ 
+ 	    # then check for a private Tk library
+ 	    case "${host}" in
+-		*-*-cygwin*) platDir="win" ;;
+ 		*) platDir="unix" ;;
+ 	    esac
+ 	    if test x"${ac_cv_c_tkconfig}" = x ; then
+--- origsrc/insight/configure.ac	2010-07-23 09:52:42.000000000 -0500
++++ src/insight/configure.ac	2010-08-24 16:30:06.203819300 -0500
+@@ -782,6 +782,8 @@ case "${target}" in
+   *-*-cygwin*)
+     target_configdirs="$target_configdirs target-libtermcap target-winsup"
+     noconfigdirs="$noconfigdirs target-gperf target-libgloss"
++    # use system tcl/tk
++    skipdirs="$skipdirs tcl tk itcl"
+     # always build newlib if winsup directory is present.
+     if test -d "$srcdir/winsup/cygwin"; then
+       skipdirs=`echo " ${skipdirs} " | sed -e 's/ target-newlib / /'`
+--- origsrc/insight/gdb/acinclude.m4	2010-05-26 22:40:45.000000000 -0500
++++ src/insight/gdb/acinclude.m4	2010-08-24 15:45:10.235620900 -0500
+@@ -369,7 +369,7 @@ dnl Note: you must use first use SC_LOAD
+ AC_DEFUN([CY_AC_TCL_PRIVATE_HEADERS], [
+   AC_MSG_CHECKING([for Tcl private headers])
+   private_dir=""
+-  dir=`echo ${TCL_INCLUDE_SPEC}/tcl-private/generic | sed -e s/-I//`
++  dir=`echo ${TCL_SRC_DIR}/generic | sed -e s/-I//`
+   if test -f ${dir}/tclInt.h ; then
+     private_dir=${dir}
+   fi
+@@ -390,7 +390,7 @@ dnl Note: you must first use SC_LOAD_TKC
+ AC_DEFUN([CY_AC_TK_PRIVATE_HEADERS], [
+   AC_MSG_CHECKING([for Tk private headers])
+   private_dir=""
+-  dir=`echo ${TK_INCLUDE_SPEC}/tk-private/generic | sed -e s/-I//`
++  dir=`echo ${TK_SRC_DIR}/generic | sed -e s/-I//`
+   if test -f ${dir}/tkInt.h; then
+     private_dir=${dir}
+   fi
+--- origsrc/insight/gdb/configure.ac	2010-08-18 17:57:46.000000000 -0500
++++ src/insight/gdb/configure.ac	2010-08-24 14:41:20.380565800 -0500
+@@ -1810,13 +1810,6 @@ AC_SUBST(SER_HARDWIRE)
+ 
+ # libreadline needs libuser32.a in a cygwin environment
+ WIN32LIBS=
+-if test x$gdb_cv_os_cygwin = xyes; then
+-    WIN32LIBS="-luser32"
+-    case "${target}" in
+-	*cygwin*) WIN32LIBS="$WIN32LIBS -limagehlp"
+-	;;
+-    esac
+-fi
+ 
+ # The ser-tcp.c module requires sockets.
+ case ${host} in
+@@ -1869,7 +1862,7 @@ AC_SUBST(WIN32LIBS)
+ AC_SUBST(WIN32LDAPP)
+ 
+ case "${host}" in
+-*-*-cygwin* | *-*-mingw* )
++*-*-mingw* )
+     configdir="win"
+     ;;
+ *)
+@@ -1968,12 +1961,6 @@ if test "${enable_gdbtk}" = "yes"; then
+ 	CONFIG_INSTALL="${CONFIG_INSTALL} install-gdbtk"
+ 	CONFIG_UNINSTALL="${CONFIG_UNINSTALL} uninstall-gdbtk"
+ 
+-	if test x$gdb_cv_os_cygwin = xyes; then
+-	  WIN32LIBS="${WIN32LIBS} -lshell32 -lgdi32 -lcomdlg32 -ladvapi32"
+-	  WIN32LDAPP="-Wl,--subsystem,console"
+-	  CONFIG_OBS="${CONFIG_OBS} gdbres.o"
+-	fi
+-
+         AC_CONFIG_SUBDIRS(gdbtk)
+     fi
+ fi
+--- origsrc/insight/gdb/gdbtk/generic/gdbtk.c	2010-06-18 17:25:26.000000000 -0500
++++ src/insight/gdb/gdbtk/generic/gdbtk.c	2010-08-24 16:07:57.436818100 -0500
+@@ -33,7 +33,7 @@
+ #include "annotate.h"
+ #include "exceptions.h"
+ 
+-#if defined(_WIN32) || defined(__CYGWIN__)
++#if defined(_WIN32)
+ #define WIN32_LEAN_AND_MEAN
+ #include <windows.h>
+ #endif
+@@ -59,10 +59,6 @@
+ #include "dis-asm.h"
+ #include "gdbcmd.h"
+ 
+-#ifdef __CYGWIN32__
+-#include <sys/cygwin.h>		/* for cygwin32_attach_handle_to_fd */
+-#endif
+-
+ extern void _initialize_gdbtk (void);
+ 
+ #ifndef __MINGW32__
+@@ -395,12 +391,7 @@ gdbtk_init (void)
+   Tcl_SetVar2 (gdbtk_interp, "GDBStartup", "host_name", (char*) host_name, TCL_GLOBAL_ONLY);
+   Tcl_SetVar2 (gdbtk_interp, "GDBStartup", "target_name", (char*) target_name, TCL_GLOBAL_ONLY);
+   {
+-#ifdef __CYGWIN
+-    char *srcdir = (char *) alloca (cygwin_posix_to_win32_path_list_buf_size (SRC_DIR));
+-    cygwin_posix_to_win32_path_list (SRC_DIR, srcdir);
+-#else /* !__CYGWIN */
+     char *srcdir = SRC_DIR;
+-#endif /* !__CYGWIN */
+     Tcl_SetVar2 (gdbtk_interp, "GDBStartup", "srcdir", srcdir, TCL_GLOBAL_ONLY);
+   }
+ 
+@@ -539,13 +530,6 @@ gdbtk_init (void)
+   if (ide_create_win_grab_command (gdbtk_interp) != TCL_OK)
+     error ("grab support command initialization failed");
+ #endif
+-#ifdef __CYGWIN32__
+-  /* Path conversion functions.  */
+-  if (ide_create_cygwin_path_command (gdbtk_interp) != TCL_OK)
+-    error ("cygwin path command initialization failed");
+-  if (ide_create_shell_execute_command (gdbtk_interp) != TCL_OK)
+-    error ("cygwin shell execute command initialization failed");
+-#endif
+ 
+   /* Only for testing -- and only when it can't be done any
+      other way. */
+@@ -583,10 +567,6 @@ gdbtk_init (void)
+       external_editor_command = NULL;
+     }
+ 
+-#ifdef __CYGWIN32__
+-  (void) FreeConsole ();
+-#endif
+-
+   discard_cleanups (old_chain);
+ }
+ 
+@@ -696,32 +676,6 @@ _initialize_gdbtk ()
+      insight is GOING to run. */
+   if (strcmp (interpreter_p, "insight") == 0)
+     deprecated_init_ui_hook = gdbtk_init_1;
+-#ifdef __CYGWIN__
+-  else
+-    {
+-      DWORD ft = GetFileType (GetStdHandle (STD_INPUT_HANDLE));
+-
+-      switch (ft)
+-	{
+-	case FILE_TYPE_DISK:
+-	case FILE_TYPE_CHAR:
+-	case FILE_TYPE_PIPE:
+-	  break;
+-	default:
+-	  AllocConsole ();
+-	  cygwin_attach_handle_to_fd ("/dev/conin", 0,
+-				      GetStdHandle (STD_INPUT_HANDLE),
+-				      1, GENERIC_READ);
+-	  cygwin_attach_handle_to_fd ("/dev/conout", 1,
+-				      GetStdHandle (STD_OUTPUT_HANDLE),
+-				      0, GENERIC_WRITE);
+-	  cygwin_attach_handle_to_fd ("/dev/conout", 2,
+-				      GetStdHandle (STD_ERROR_HANDLE),
+-				      0, GENERIC_WRITE);
+-	  break;
+-	}
+-    }
+-#endif
+ }
+ 
+ static void
+--- origsrc/insight/gdb/gdbtk/plugins/Make-rules	2008-08-02 17:08:32.000000000 -0500
++++ src/insight/gdb/gdbtk/plugins/Make-rules	2010-08-24 16:11:41.381627100 -0500
+@@ -45,11 +45,6 @@ INSTALL_DATA = @INSTALL_DATA@
+ PLUGIN_MODULE = $(PLUGIN)$(TCL_SHLIB_SUFFIX)
+ 
+ # Must include a path to tclWinInt.h on cygwin
+-ifeq ($(TCL_SHLIB_SUFFIX),.dll)
+-CYGWIN_CFLAGS=-I$(srcdir)/../../../../tcl/win
+-else
+-CYGWIN_CFLAGS=
+-endif
+ GENERIC_CFLAGS = $(CFLAGS) $(TCL_SHLIB_CFLAGS) $(TCL_INCLUDES) $(CYGWIN_CFLAGS)
+ ALL_CFLAGS = $(GENERIC_CFLAGS) $(PLUGIN_CFLAGS)
+ 
+@@ -128,39 +123,6 @@ distclean: $(DISTCLEAN_TARGET)
+ # Build rules for the DLL/shlib
+ #
+ 
+-ifeq ($(TCL_SHLIB_SUFFIX),.dll)
+-
+-# cygwin stuff
+-DLLTOOL = @DLLTOOL@
+-LD = @LD@
+-AS = @AS@
+-NM = @NM@
+-
+-PLUGIN_DEFS = $(PLUGIN).def
+-PLUGIN_BASE = $(PLUGIN).base
+-PLUGIN_EXP = $(PLUGIN).exp
+-ifeq ($(PLUGIN_DLL_ENTRY),)
+-PLUGIN_DLL_ENTRY = _DllMain@12
+-endif
+-
+-$(PLUGIN_DEFS): $(PLUGIN_OBJS)
+-	echo 'EXPORTS' > tmp.def
+-	-for o in $(PLUGIN_OBJS) ; do \
+-	  $(NM) --extern-only --defined-only $$o | sed -e 's/[^ ]* [^ ]* //' -e 's/^_//' | fgrep -v DllMain | fgrep -v impure_ptr >> tmp.def ; \
+-	done
+-	mv tmp.def $(PLUGIN_DEFS)
+-
+-$(PLUGIN_MODULE): $(PLUGIN_OBJS) $(PLUGIN_DEFS)
+-	$(LD) -s --base-file $(PLUGIN_BASE) -dll -o $(PLUGIN_MODULE) $(PLUGIN_OBJS) $(ALL_SHLIB_LIBS) $(CYGWIN_DLL_LIBS) -e $(PLUGIN_DLL_ENTRY) --image-base $(PLUGIN_IMAGE_BASE)
+-	$(DLLTOOL) --as=$(AS) --dllname $(PLUGIN_MODULE) --def $(PLUGIN_DEFS) --base-file $(PLUGIN_DEFS) --output-exp $(PLUGIN_EXP)
+-	$(LD) -s --base-file $(PLUGIN_BASE) $(PLUGIN_EXP) -dll -o $(PLUGIN_MODULE) $(PLUGIN_OBJS) $(ALL_SHLIB_LIBS) $(CYGWIN_DLL_LIBS) -e $(PLUGIN_DLL_ENTRY) --image-base $(PLUGIN_IMAGE_BASE)
+-	$(DLLTOOL) --as=$(AS) --dllname $(PLUGIN_MODULE) --def $(PLUGIN_DEFS) --base-file $(PLUGIN_BASE) --output-exp $(PLUGIN_EXP)
+-	$(LD) $(PLUGIN_EXP) -dll -o $(PLUGIN_MODULE) $(PLUGIN_OBJS) $(ALL_SHLIB_LIBS) $(CYGWIN_DLL_LIBS) -e $(PLUGIN_DLL_ENTRY) --image-base $(PLUGIN_IMAGE_BASE)
+-
+-else
+-
+ # For unixen only
+ $(PLUGIN_MODULE): $(PLUGIN_OBJS)
+ 	$(TCL_SHLIB_LD) -o $(PLUGIN_MODULE) $(PLUGIN_OBJS) $(ALL_SHLIB_LIBS)
+-
+-endif
+--- origsrc/insight/gdb/gdbtk/plugins/configure.ac	2008-08-02 17:08:32.000000000 -0500
++++ src/insight/gdb/gdbtk/plugins/configure.ac	2010-08-24 14:36:47.378951000 -0500
+@@ -47,16 +47,6 @@ AC_SUBST(TCL_SHLIB_SUFFIX)
+ # Since we're not using autoconf > 2.1x, we cannot use AC_CONFIG_FILES.
+ make_subdirs=""
+ 
+-# See if -mwin32 works for cygwin
+-case "${host}" in
+-  *cygwin*)
+-    ocflags=${CFLAGS}
+-    CFLAGS="${CFLAGS} -mwin32"
+-    AC_TRY_COMPILE(,,,CFLAGS="${ocflags}")
+-    ;;
+-  *) ;;
+-esac
+-
+ # note toplevel plugin build directory
+ plugin_builddir=`pwd`
+ 
+--- origsrc/insight/gdb/gdbtk/plugins/rhabout/rhabout.c	2004-12-08 14:21:08.000000000 -0600
++++ src/insight/gdb/gdbtk/plugins/rhabout/rhabout.c	2010-08-24 16:09:57.905708600 -0500
+@@ -4,11 +4,7 @@
+ #include <tcl.h>
+ 
+ /* Define the functions that implement your commands as required by Tcl */
+-#ifdef __CYGWIN__
+-#  define EXPORT __declspec(dllexport)
+-#else
+-#  define EXPORT /* nothing */
+-#endif
++#define EXPORT /* nothing */
+ 
+ int extra_text (ClientData clientData,
+                 Tcl_Interp *interp,
+@@ -39,19 +35,3 @@ Rhabout_Init (Tcl_Interp *interp)
+   Tcl_PkgProvide (interp, "RHABOUT", "1.0");
+   return TCL_OK;
+ }
+-
+-/* This is REQUIRED for cygwin */
+-#ifdef __CYGWIN__
+-#include <windows.h>
+-#include <tclInt.h>
+-
+-struct _reent *_impure_ptr;
+-extern struct _reent *_imp__reent_data;
+-
+-BOOL APIENTRY
+-DllMain (HINSTANCE hInstance, DWORD reason, LPVOID reserved)
+-{
+-  _impure_ptr = _imp__reent_data;
+-  return TRUE;
+-}
+-#endif
+--- origsrc/insight/libgui/acinclude.m4	2008-08-02 18:33:36.000000000 -0500
++++ src/insight/libgui/acinclude.m4	2010-08-24 15:35:12.539434700 -0500
+@@ -8,7 +8,7 @@ dnl Note: you must use first use SC_LOAD
+ AC_DEFUN([CY_AC_TCL_PRIVATE_HEADERS], [
+   AC_MSG_CHECKING([for Tcl private headers])
+   private_dir=""
+-  dir=`echo ${TCL_INCLUDE_SPEC}/tcl-private/generic | sed -e s/-I//`
++  dir=`echo ${TCL_SRC_DIR}/generic | sed -e s/-I//`
+   if test -f ${dir}/tclInt.h ; then
+     private_dir=${dir}
+   fi
+@@ -29,7 +29,7 @@ dnl Note: you must first use SC_LOAD_TKC
+ AC_DEFUN([CY_AC_TK_PRIVATE_HEADERS], [
+   AC_MSG_CHECKING([for Tk private headers])
+   private_dir=""
+-  dir=`echo ${TK_INCLUDE_SPEC}/tk-private/generic | sed -e s/-I//`
++  dir=`echo ${TK_SRC_DIR}/generic | sed -e s/-I//`
+   if test -f ${dir}/tkInt.h; then
+     private_dir=${dir}
+   fi
+--- origsrc/insight/libgui/configure.ac	2008-08-02 18:33:36.000000000 -0500
++++ src/insight/libgui/configure.ac	2010-08-24 13:50:51.828348600 -0500
+@@ -42,32 +42,6 @@ AC_EGREP_CPP(strncasecmp, [#include <str
+   AC_DEFINE(HAVE_STRNCASECMP_DECL))
+ 
+ 
+-AC_CACHE_CHECK([for cygwin32], ide_cv_os_cygwin32,
+-[AC_EGREP_CPP(lose, [
+-#ifdef __CYGWIN32__
+-lose
+-#endif],[ide_cv_os_cygwin32=yes],[ide_cv_os_cygwin32=no])])
+-ac_win_build="no"
+-if test x$ide_cv_os_cygwin32 = xyes; then
+-  ac_win_build="yes"
+-fi
+-
+-case "${host}" in
+-*-*-cygwin*)
+-        touch ac$$.c
+-        if ${CC} -c -mwin32 ac$$.c >/dev/null 2>&1; then
+-            case "$LIBGUI_CFLAGS" in
+-                *-mwin32*) ;;
+-                *) LIBGUI_CFLAGS="-mwin32 $LIBGUI_CFLAGS" ;;
+-            esac
+-        fi
+-        rm -f ac$$.o ac$$.c
+-        ;;
+-esac
+-case "${host}" in
+-*-*-cygwin*)
+-	LIBGUI_CFLAGS="-DWIN32 $LIBGUI_CFLAGS" ;;
+-esac
+ AC_SUBST(LIBGUI_CFLAGS) 
+ 
+ tmp="`cd $srcdir/library; pwd`"
+@@ -93,7 +67,6 @@ cd ${here}
+ if test "${TCL_SRC_DIR}" = "${topdir}/tcl"; then
+   # Using in-tree Tcl/Tk
+   case "${host}" in
+-    *-*-cygwin*) platDir="win" ;;
+     *) platDir="unix" ;;
+   esac
+ 
