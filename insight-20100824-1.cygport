@@ -2,7 +2,7 @@ CVS_URI=":pserver:anoncvs@sourceware.org:/cvs/src"
 inherit cvs
 
 DESCRIPTION="GNU Debugger (Tk GUI)"
-HOMEPAGE="http://www.gnu.org/software/gdb/"
+HOMEPAGE="http://sourceware.org/insight/"
 
 PATCH_URI="config-rpath.patch
            20100824-cygwin-tcltk.patch"

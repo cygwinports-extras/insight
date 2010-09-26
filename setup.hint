@@ -1,0 +1,5 @@
+category: Devel
+requires: libexpat1 libiconv2 libintl8 libncurses10 libX11_6 python tcl tcl-tk zlib0
+sdesc: "GNU debugger (Tcl/Tk GUI)"
+ldesc: "Insight is a graphical user interface to GDB, the GNU Debugger, 
+written in Tcl/Tk."
