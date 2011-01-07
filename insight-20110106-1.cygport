@@ -1,5 +1,7 @@
 CVS_URI=":pserver:anoncvs@sourceware.org:/cvs/src"
+CVS_DATE=${PV##*.}
 inherit cvs
+SRC_DIR="src"
 
 DESCRIPTION="GNU Debugger (Tk GUI)"
 HOMEPAGE="http://sourceware.org/insight/"
@@ -8,6 +10,8 @@ PATCH_URI="config-rpath.patch
            20100824-cygwin-tcltk.patch"
 
 DIFF_EXCLUDES="configure"
+
+PATH="/opt/gcc-tools/bin:$PATH"
 
 src_compile() {
 	for d in . gdb gdb/gdbtk/plugins libgui

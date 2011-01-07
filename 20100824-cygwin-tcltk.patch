@@ -1,14 +1,3 @@
---- origsrc/insight/config/override.m4	2010-06-10 11:09:45.000000000 -0500
-+++ src/insight/config/override.m4	2010-08-24 14:42:38.854054200 -0500
-@@ -29,7 +29,7 @@ m4_copy_force([_AC_PREREQ], [AC_PREREQ])
- 
- dnl Ensure exactly this Autoconf version is used
- m4_ifndef([_GCC_AUTOCONF_VERSION],
--  [m4_define([_GCC_AUTOCONF_VERSION], [2.64])])
-+  [m4_define([_GCC_AUTOCONF_VERSION], [2.65])])
- 
- dnl Test for the exact version when AC_INIT is expanded.
- dnl This allows to update the tree in steps (for testing)
 --- origsrc/insight/config/tcl.m4	2009-02-02 17:18:05.000000000 -0600
 +++ src/insight/config/tcl.m4	2010-08-24 16:54:15.509913100 -0500
 @@ -33,7 +33,6 @@ AC_DEFUN([SC_PATH_TCLCONFIG], [
