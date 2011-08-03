@@ -24,6 +24,7 @@ src_compile() {
 	cd ${B}
 	cygconf --disable-werror \
 		--disable-tui \
+		--with-gdb-datadir=/usr/share/insight1.0 \
 		--with-tcl=/usr/lib \
 		--with-tk=/usr/lib
 
@@ -37,5 +38,5 @@ src_install() {
 	# conflicts with gdb
 	rm -f ${D}/usr/bin/gdb*
 	rm -fr ${D}/usr/{include,lib}
-	rm -fr ${D}/usr/share/{gdb,info,locale,man}
+	rm -fr ${D}/usr/share/{info,locale,man}
 }

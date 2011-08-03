@@ -21,7 +21,7 @@
 @@ -782,6 +782,8 @@ case "${target}" in
    *-*-cygwin*)
      target_configdirs="$target_configdirs target-libtermcap target-winsup"
-     noconfigdirs="$noconfigdirs target-gperf target-libgloss"
+     noconfigdirs="$noconfigdirs target-libgloss"
 +    # use system tcl/tk
 +    skipdirs="$skipdirs tcl tk itcl"
      # always build newlib if winsup directory is present.
